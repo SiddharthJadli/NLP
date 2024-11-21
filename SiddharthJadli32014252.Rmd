@@ -1,0 +1,414 @@
+---
+title: "SidharthJadli32014252"
+author: "Siddharth Jadli"
+date: "2024-06-02"
+output: html_document
+---
+
+# Task 1 (2 Marks) & Task 2 (3 Marks)
+
+In these tasks I collected a set of machine-readable text documents from a few areas 
+of my interest. My favourite interests lie in William Shakespeare's Literature, Pop 
+Smoke's Hip-Hop/Rap music and 2 of my favourite sports - Tennis and Formula 1. 
+
+All of my sources are listed below in APA Style - 
+
+In-text citation:
+For "The Tragedy of Julius Caesar" (Shakespeare, 1599) and "The Tragedy of Romeo and Juliet" (Shakespeare, 1594):
+
+Reference list:
+Shakespeare, W. (1599, 1594). The tragedy of Julius Caesar and The Tragedy of Romeo and Juliet. Open Source Shakespeare. Retrieved from [https://www.opensourceshakespeare.org/]
+
+In-text citation:
+For lyrics from the song "Dior" (Pop Smoke, 2019), "Merci Beaucoup" (Pop Smoke, 2021), "Element" (Pop Smoke, 2020) and "Christopher Walking" (Pop Smoke, 2020):
+
+Reference list:
+Pop Smoke. (2019, 2021, 2020). Dior, Merci Beaucoup, Christopher Walking. Genius. Retrieved from [https://genius.com/Pop-smoke-dior-lyrics, https://genius.com/Pop-smoke-merci-beaucoup-lyrics, https://genius.com/Pop-smoke-element-lyrics,  https://genius.com/Pop-smoke-christopher-walking-lyrics]
+
+In-text citation:
+For quotes from the press conference transcript (Fédération Internationale de l'Automobile, 2024):
+
+Reference list:
+Fédération Internationale de l'Automobile. (2024). F1 2024 Monaco Grand Prix post-race press conference transcript. Retrieved from [https://www.fia.com/news/f1-2024-monaco-grand-prix-post-race-press-conference-transcript]
+
+In-text citation:
+For quotes from the press conference transcripts (ASAP Sports, 2024):
+
+Reference list:
+ASAP Sports. (2024). Rolland Garros Press conference transcripts. Retrieved from [https://www.asapsports.com/show_event.php?category=7&date=2024-5-25&title=ROLAND+GARROS]
+
+I copied and pasted these texts into a txt file. I also made sure that each file was ran through a profanity detector and ommited and flagged profanities. Since I had some domain knowledge regarding the areas of interest I had some preemption that the usage of words within each domain would be similar, which would lead to a good clustering model built on top of the bag of words model that we will use for this assignment. 
+
+These txt files were placed in one folder, and I put labels in each file name (Literature, Music or Sport)
+
+# Task 3: DTM (3 Marks) 
+
+We will initialize the assignment by removing all objects from the current workspace and setting the working directory to the correct address in my local machine; loading necessary packages and initializing the corpus with the docs variable
+
+```{r}
+# Set working directory to desktop
+setwd("/Users/Sid/Desktop/Monash/FIT3152/Ass03")
+
+# Cleaning up the environment before starting
+rm(list = ls()) 
+
+set.seed(32014252) # Setting seed for reproducability
+
+# LIBRARIES
+library(tm)
+library(slam)       # Matrices and arrays
+library(SnowballC)  # Stemming
+library(proxy)      # Cosine distances
+library(igraph)     # Graph analysis
+library(igraphdata) # Graph analysis
+
+# Get file path to folder "Corpus" where the documents are located
+cname = file.path(".", "Corpus")
+docs = Corpus(DirSource((cname)))
+print(summary(docs))
+```
+
+Now that we have retrieved the documents, we will tokenise our data by processing it and create the document term matrix (DTM). First I will perform some text transformations which I was able to observe in the lyrics of the music, remove punctuations, numbers, white space, stop words and convert to lower case. We will then stem the words to convert them to their root form.
+
+```{r}
+# Text transformations, ref Williams
+text_transformation <- content_transformer(function(x, pattern, replacement) {
+  gsub(pattern, replacement, x, ignore.case = TRUE)
+})
+
+docs <- tm_map(docs, content_transformer(tolower))      # converting to lower case
+
+# Apply the custom transformation to the corpus
+corpus <- tm_map(docs, text_transformation, "sayin'", "saying")
+corpus <- tm_map(docs, text_transformation, "poppin'", "popping")
+corpus <- tm_map(docs, text_transformation, "grabbin'", "grabbing")
+corpus <- tm_map(docs, text_transformation, "talkin'", "talking")
+corpus <- tm_map(docs, text_transformation, "shoppin'", "shopping")
+corpus <- tm_map(docs, text_transformation, "makin'", "making")
+corpus <- tm_map(docs, text_transformation, "gon'", "gonna")
+corpus <- tm_map(docs, text_transformation, "drownin'", "drowning")
+corpus <- tm_map(docs, text_transformation, "hunnid", "hundred")
+corpus <- tm_map(docs, text_transformation, "budgin'", "budging")
+corpus <- tm_map(docs, text_transformation, "gassin'", "gassing")
+corpus <- tm_map(docs, text_transformation, "pumpin", "pumping")
+corpus <- tm_map(docs, text_transformation, "opp", "opposition")
+corpus <- tm_map(docs, text_transformation, "lackin'", "lacking")
+corpus <- tm_map(docs, text_transformation, "feelin'", "feeling")
+corpus <- tm_map(docs, text_transformation, "'cause", "because")
+corpus <- tm_map(docs, text_transformation, "suckin'", "sucking")
+corpus <- tm_map(docs, text_transformation, "screamin'", "screaming")
+corpus <- tm_map(docs, text_transformation, "throwin'", "throwing")
+corpus <- tm_map(docs, text_transformation, "wildin'", "wilding")
+corpus <- tm_map(docs, text_transformation, "raisin'", "raising")
+corpus <- tm_map(docs, text_transformation, "doin", "doing")
+corpus <- tm_map(corpus, text_transformation, "takin'", "taking")
+corpus <- tm_map(corpus, text_transformation, "hol", "hold")
+corpus <- tm_map(corpus, text_transformation, "'Rari", "ferrari")
+corpus <- tm_map(corpus, text_transformation, "Saucin'", "saucing")
+corpus <- tm_map(corpus, text_transformation, "nothin'", "nothing")
+corpus <- tm_map(corpus, text_transformation, "whatchu", "what you")
+corpus <- tm_map(corpus, text_transformation, "somethin'", "something")
+corpus <- tm_map(corpus, text_transformation, "winnin'", "winning")
+
+
+docs <- tm_map(docs, removeNumbers)                     # removing numbers
+docs <- tm_map(docs, removePunctuation)                 # removing punctuations
+docs <- tm_map(docs, removeWords, stopwords("english")) # removing stop words
+docs <- tm_map(docs, stripWhitespace)                   # removing white space
+
+docs <- tm_map(docs, stemDocument, language = "english") # stemming
+
+# Create document term matrix
+dtm <- DocumentTermMatrix(docs)
+inspect(dtm)
+```
+
+We have 2653 terms in our DTM containing 16 documents has a high sparcity (87%). Now we will remove sparce terms (I tried various combinations of thresholds and 0.4 was gave me the best results)
+
+```{r}
+# Remove sparse terms
+dtms <- removeSparseTerms(dtm, 0.4)  # Remove columns with 40% empty (0) cells
+inspect(dtms)
+```
+
+We can see observe that sparcity has reduced to 26% and we have 39 terms in our DTM
+
+```{r}
+dtms = as.matrix(dtms)
+write.csv(dtms, "dtms.csv")
+```
+
+
+# Task 4: Hierarchical Clustering (4 Marks) 
+
+Now we will performing clustering using cosine distances on our DTM. 
+
+```{r}
+# Clustering
+set.seed(32014252) # keep clustering consistent
+
+distmatrix = proxy::dist(dtms, method = "cosine")
+fit = hclust(distmatrix, method = "ward.D")
+plot(fit, xlab = "", cex = 0.7)
+```
+
+We can see that our clustering has clustered Literature, Music and Sport in their respective branches and the further branches down to show similarity within each groups (More similar documents are branching down together, i.e, Act III Sc 1 from Julius Ceaser and Act III Sc 2 from Julius Ceaser are very similar compared to Act II Sc 1 from Julius Ceaser). Now we will find the accuracy of our clustering model, which should be a 100% by looking at the plot above.
+
+```{r}
+# Vector of topic labels in same order as corpus
+topics = c("Lit","Lit","Lit", "Lit", "Lit", "Lit",
+            "Music", "Sport", "Sport", "Music", "Music", "Sport", "Sport", "Music", "Sport",
+            "Sport")
+
+groups = cutree(fit, k = 3) # vector of cluster numbers
+
+# create matrix and reorder columns
+TA = as.data.frame.matrix(table(GroupNames = topics, Clusters = groups))
+TA
+```
+
+We can see that the model has clustered all the documents correctly where group 1 is Literature, group 2 is Music and group 3 is Sport.
+
+# Task 5: Documents single-mode network (4 Marks) 
+
+### Creating the network 
+
+```{r}
+# Convert original DTM to binary matrix
+dtmsx = as.matrix(dtms)
+dtmsx = as.matrix((dtmsx > 0) + 0)
+
+# multiply binary matrix by its transpose
+ByAbsMatrix = dtmsx %*% t(dtmsx)
+
+# make leading diagonal zero
+diag(ByAbsMatrix) = 0
+
+# create graph object
+ByAbs = graph_from_adjacency_matrix(ByAbsMatrix, mode = "undirected", weighted = TRUE)
+
+set.seed(32014252) # keep clustering consistent
+plot(ByAbs)
+```
+
+### Network Statistics
+
+```{r}
+# calculate network centrality measures and combine in a dataframe
+d = as.table(degree(ByAbs))
+b = as.table(betweenness(ByAbs))
+c = as.table(closeness(ByAbs))
+e = as.table(evcent(ByAbs)$vector)
+stats = as.data.frame(rbind(d,b,c,e))
+stats = as.data.frame(t(stats))
+colnames(stats) = c("degree", "betweenness", "closeness", "eigenvector")
+
+averagePath = average.path.length(ByAbs)
+diameter = diameter(ByAbs)
+```
+
+Based on how we created the network, we can expect the degree to be 14 because each document is linked to every other document in our corpus. 
+
+```{r}
+# sort and explore key nodes
+stats[order(-stats$betweenness),]
+stats[order(-stats$closeness),]
+stats[order(-stats$eigenvector),]
+print(stats, digits = 3)
+```
+
+CENTRALITY MEASURES - 
+
+We can observe that indeed, the degree of each node is the same. 
+
+"Dior - Pop Smoke (Music).txt" has a significantly higher betweenness (57.5) compared to others, suggesting it acts as a key connector in the network. Betweenness centrality is the measure to which a node lies on the shortest paths between other nodes. Higher betweenness indicates that the node plays a crucial bridging role in the network. 
+
+Closeness Centrality wise the values are relatively close, indicating that most nodes are similarly close to others. It reflects on how close a node is to all other nodes in the network, based on the average shortest path distance. Nodes with higher closeness centrality can spread information more quickly through the network. 
+
+Eigenvector Centrality measures a node's influence based on the quality and quantity of its connections. Nodes connected to other well-connected nodes have higher eigenvector centrality. "CL - F1 (Sport).txt" has the highest eigenvector centrality (1.000), indicating it is the most influential document in this network.
+
+```{r}
+cat("Average Path Length: ", averagePath, "\nDiameter: ", diameter)
+```
+
+Global Network Properties-
+Average Path Length: 18.91 - This indicates the average number of steps along the shortest paths for all possible pairs of network nodes. A higher average path length suggests a more dispersed network.
+
+Diameter: 27 - This is the longest shortest path between any two nodes in the network. The diameter indicates the network's maximum distance between any pair of nodes is 27 steps.
+
+OVERALL ANALYSIS-
+The closeness centrality values are similar, suggesting that the efficiency of information spread is fairly consistent across the network. 
+The average path length and diameter indicate a fairly large network with substantial reach. The network is neither extremely compact nor overly sparse.
+
+### Community detection
+
+```{r}
+set.seed(32014252) # keep community detection consistent
+#identify community groups/clusters using cluster_fast_greedy()
+cfg = cluster_fast_greedy(as.undirected(ByAbs))
+g_cfg = plot(cfg,
+             as.undirected(ByAbs),vertex.label=V(ByAbs)$role,main="Fast
+Greedy")
+
+# Inspect the community membership
+membership(cfg)
+```
+
+Here we can see that the fast greedy clustering algorithm has classified the nodes into 2 clusters, with all the songs being classified into group 1 and the remaining documents being classified into group 2. Accuracy wise, the algorithm was able to classify 1 of 3 groups which is an accuracy of 33%.
+
+# Task 6: Tokens single-mode network (4 Marks) 
+
+### Creating the network 
+
+```{r}
+# original dtm
+dtmsx = as.matrix(dtms)
+
+# convert to binary matrix
+dtmsx = as.matrix((dtmsx > 0) + 0)
+
+# multiply transpose binary matrix by binary matrix
+ByTokenMatrix = t(dtmsx) %*% dtmsx
+
+# make leading diagonal zero
+diag(ByTokenMatrix) = 0
+
+# create graph object
+ByToken = graph_from_adjacency_matrix(ByTokenMatrix, mode = "undirected", weighted = TRUE)
+
+set.seed(32014252) # keep clustering consistent
+plot(ByToken) # plot
+```
+
+### Network Statistics
+
+```{r}
+# calculate network centrality measures and combine in a dataframe
+b = as.table(betweenness(ByToken))
+c = as.table(closeness(ByToken))
+e = as.table(evcent(ByToken)$vector)
+
+stats = as.data.frame(rbind(b,c,e))
+stats = as.data.frame(t(stats))
+colnames(stats) = c("betweenness", "closeness", "eigenvector")
+
+averagePath = average.path.length(ByToken)
+diameter = diameter(ByToken)
+
+#sort and explore key nodes
+stats[order(-stats$betweenness),]
+stats[order(-stats$closeness),]
+stats[order(-stats$eigenvector),]
+print(stats, digits = 3)
+```
+
+CENTRALITY MEASURES - 
+
+It seems like all the betweenness centrality values are reported as 0, which could indicate that there are no intermediate nodes on the shortest paths between pairs of nodes in the network. This could suggest that the network is either very small or highly interconnected, where multiple paths exist between any pair of nodes, making the concept of betweenness less meaningful.
+
+terms like "tell," "come," "know," "now," "one," and "like" have high closeness centrality, indicating their centrality in the network. Additionally, terms like "tell," "know," and "make" have high eigenvector centrality, suggesting their influence and connection to other influential terms in the network.
+
+Overall, the network seems to have a certain level of interconnectedness, as indicated by the non-zero closeness centrality values, but lacks clear intermediaries in terms of betweenness centrality. The variation in eigenvector centrality values suggests differences in the importance or influence of tokens within the network.
+
+```{r}
+cat("Average Path Length: ", averagePath, "\nDiameter: ", diameter)
+```
+
+Global Network Properties-
+
+The average path length of 9.426451 indicates that, on average, it takes approximately 9.43 steps to navigate between any two nodes in the network. This suggests that the network is relatively dense and well-connected, as the average distance between nodes is relatively short.
+
+The diameter of 15 indicates that the longest shortest path between any pair of nodes in the network is 15 steps. This suggests that the network is not overly spread out, as even the farthest nodes are relatively reachable within a moderate number of steps.
+
+Overall, these global network properties suggest that the network has a dense and interconnected structure, with relatively short paths between most pairs of nodes.
+
+### Community detection
+
+```{r}
+set.seed(32014252) # keep clustering consistent
+#identify community groups/clusters using cluster_fast_greedy()
+cfg = cluster_fast_greedy(as.undirected(ByToken))
+
+g_cfg = plot(cfg,
+             as.undirected(ByToken),vertex.label=V(ByToken)$role,main="Fast
+Greedy")
+
+# Inspect the community membership
+membership(cfg)
+```
+
+Terms assigned to the same community are more densely connected to each other within the network compared to terms assigned to different communities wheras terms assigned to different communities may have weaker connections or fewer interactions with each other within the network. With what we can observe from the fast greedy community detection algorithm -
+Community 1 contains terms such as "day," "first," "make," "place," "thing,"
+Community 2 contains terms such as "can," "come," "good," "like," "look," "think,"
+
+# Task 7: Bipartite (two-mode) network (4 Marks) 
+
+### Creating the network
+
+```{r}
+# formatting data for bipartite graph
+dtmsa = as.data.frame(dtms) # clone dtms
+dtmsa$ABS = rownames(dtmsa) # add row names
+dtmsb = data.frame()
+
+for (i in 1:nrow(dtmsa)){
+    for (j in 1:(ncol(dtmsa)-1)){
+        touse = cbind(dtmsa[i,j], dtmsa[i,ncol(dtmsa)], colnames(dtmsa[j]))
+    dtmsb = rbind(dtmsb, touse ) # close loops
+    } 
+  } 
+
+colnames(dtmsb) = c("weight", "abs", "token")
+dtmsc = dtmsb[dtmsb$weight != 0,] # delete 0 weights
+
+dtmsc = dtmsc[,c(2,3,1)]  # put colunms in order: abs, token, weight
+```
+
+### Plotting the graph
+
+```{r}
+set.seed(32014252) # keep plot consistent
+# plotting bipartite graph
+g <- graph.data.frame(dtmsc, directed=FALSE)
+V(g)$type <- bipartite_mapping(g)$type
+V(g)$color <- ifelse(V(g)$type, "lightgreen", "pink")
+V(g)$shape <- ifelse(V(g)$type, "circle", "square")
+E(g)$color <- "lightgray"
+plot(g)
+```
+
+### Network Statistics
+
+```{r}
+# calculate network centrality measures and combine in a dataframe
+d = as.table(degree(g))
+b = as.table(betweenness(g))
+c = as.table(closeness(g))
+t = as.table(transitivity(g))
+
+stats = as.data.frame(rbind(d, b, c, t))
+stats = as.data.frame(t(stats))
+colnames(stats) = c("degree", "betweenness", "closeness", "transitivity")
+
+averagePath = average.path.length(g)
+diameter = diameter(g)
+
+#sort and explore key nodes
+stats[order(-stats$betweenness),]
+stats[order(-stats$closeness),]
+print(stats, digits = 3)
+```
+
+The node "Act I Sc 5 - R & J (Lit).txt" has a degree of 30, a betweenness centrality of 86.923, and a closeness centrality of 0.00752. This suggests that this node is highly connected (with 28 connections), plays a significant role in connecting other nodes (high betweenness centrality), and is relatively close to other nodes in the network (closeness centrality).
+
+Conversely, the node "will" has a degree of 10, a betweenness centrality of 0, and a closeness centrality of 0.00295 This indicates that "will" has fewer connections, does not lie on many shortest paths between other nodes, and is relatively distant from other nodes in the network.
+
+We can also observe that the transitivity is 0, which means there are no such triangles in the graph, implying a lack of clustering or transitive relationships.
+
+```{r}
+cat("Average Path Length: ", averagePath, "\nDiameter: ", diameter)
+```
+
+The average path length of 2.745455 indicates that, on average, nodes in the network are relatively close to each other, requiring just under three steps to reach one another. This suggests a relatively efficient communication or information flow within the network.
+
+The diameter of 8 indicates the longest shortest path between any two nodes in the network. While the average path length is relatively low, the diameter suggests that there may be some pairs of nodes that are more distant from each other, requiring up to 8 steps to reach one another. This could imply certain pockets or clusters of nodes that are less directly connected to each other.
